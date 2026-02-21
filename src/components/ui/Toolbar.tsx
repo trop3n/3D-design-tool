@@ -1,6 +1,6 @@
 import React from 'react';
 import { useStore } from '../../store/useStore';
-import { Box, Circle, Square, Move, RotateCw, Scaling, Download } from 'lucide-react';
+import { Box, Circle, Square, Move, RotateCw, Scaling, Download, Undo2, Redo2 } from 'lucide-react';
 
 export const Toolbar: React.FC = () => {
   const addObject = useStore((state) => state.addObject);
@@ -8,8 +8,32 @@ export const Toolbar: React.FC = () => {
   const setTransformMode = useStore((state) => state.setTransformMode);
   const setIsExporting = useStore((state) => state.setIsExporting);
 
+  const handleUndo = () => {
+    (useStore as any).temporal.getState().undo();
+  };
+
+  const handleRedo = () => {
+    (useStore as any).temporal.getState().redo();
+  };
+
   return (
     <div className="absolute top-4 left-1/2 transform -translate-x-1/2 flex gap-4 p-2 bg-gray-800 rounded-lg shadow-lg z-10">
+      <div className="flex gap-2 border-r border-gray-600 pr-4">
+        <button 
+          onClick={handleUndo}
+          className="p-2 hover:bg-gray-700 rounded transition-colors"
+          title="Undo (Ctrl+Z)"
+        >
+          <Undo2 size={20} color="white" />
+        </button>
+        <button 
+          onClick={handleRedo}
+          className="p-2 hover:bg-gray-700 rounded transition-colors"
+          title="Redo (Ctrl+Shift+Z)"
+        >
+          <Redo2 size={20} color="white" />
+        </button>
+      </div>
       <div className="flex gap-2 border-r border-gray-600 pr-4">
         <button 
           onClick={() => setTransformMode('translate')}

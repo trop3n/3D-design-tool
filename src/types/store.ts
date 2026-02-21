@@ -10,6 +10,7 @@ export interface SceneObject {
   color: string;
   roughness: number;
   metalness: number;
+  textureUrl?: string;
 }
 
 export interface AppState {

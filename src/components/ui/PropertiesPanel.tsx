@@ -1,6 +1,7 @@
 import React from 'react';
 import { useStore } from '../../store/useStore';
 import type { SceneObject } from '../../types/store';
+import { ScrubberInput } from './ScrubberInput';
 
 export const PropertiesPanel: React.FC = () => {
   const selectedId = useStore((state) => state.selectedId);
@@ -12,7 +13,7 @@ export const PropertiesPanel: React.FC = () => {
 
   if (!selectedObject) {
     return (
-      <div className="absolute right-0 top-0 h-full w-64 bg-gray-900 text-white p-4 border-l border-gray-700">
+      <div className="h-full w-full bg-gray-900 text-white p-4 overflow-y-auto">
         <p className="text-gray-400 text-sm">Select an object to edit properties.</p>
       </div>
     );
@@ -46,78 +47,27 @@ export const PropertiesPanel: React.FC = () => {
       <div className="mb-4">
         <label className="block text-xs font-bold text-gray-400 mb-1">Position</label>
         <div className="flex gap-2">
-          <input 
-            type="number" 
-            value={selectedObject.position[0]} 
-            onChange={(e) => handleChange('position', 0, parseFloat(e.target.value))}
-            className="w-full bg-gray-800 rounded px-2 py-1 text-sm text-center"
-          />
-          <input 
-            type="number" 
-            value={selectedObject.position[1]} 
-            onChange={(e) => handleChange('position', 1, parseFloat(e.target.value))}
-            className="w-full bg-gray-800 rounded px-2 py-1 text-sm text-center"
-          />
-          <input 
-            type="number" 
-            value={selectedObject.position[2]} 
-            onChange={(e) => handleChange('position', 2, parseFloat(e.target.value))}
-            className="w-full bg-gray-800 rounded px-2 py-1 text-sm text-center"
-          />
+          <ScrubberInput label="X" value={selectedObject.position[0]} onChange={(v) => handleChange('position', 0, v)} />
+          <ScrubberInput label="Y" value={selectedObject.position[1]} onChange={(v) => handleChange('position', 1, v)} />
+          <ScrubberInput label="Z" value={selectedObject.position[2]} onChange={(v) => handleChange('position', 2, v)} />
         </div>
       </div>
 
       <div className="mb-4">
         <label className="block text-xs font-bold text-gray-400 mb-1">Rotation</label>
         <div className="flex gap-2">
-          <input 
-            type="number" 
-            step="0.1"
-            value={selectedObject.rotation[0]} 
-            onChange={(e) => handleChange('rotation', 0, parseFloat(e.target.value))}
-            className="w-full bg-gray-800 rounded px-2 py-1 text-sm text-center"
-          />
-          <input 
-            type="number" 
-            step="0.1"
-            value={selectedObject.rotation[1]} 
-            onChange={(e) => handleChange('rotation', 1, parseFloat(e.target.value))}
-            className="w-full bg-gray-800 rounded px-2 py-1 text-sm text-center"
-          />
-          <input 
-            type="number" 
-            step="0.1"
-            value={selectedObject.rotation[2]} 
-            onChange={(e) => handleChange('rotation', 2, parseFloat(e.target.value))}
-            className="w-full bg-gray-800 rounded px-2 py-1 text-sm text-center"
-          />
+          <ScrubberInput label="X" value={selectedObject.rotation[0]} onChange={(v) => handleChange('rotation', 0, v)} />
+          <ScrubberInput label="Y" value={selectedObject.rotation[1]} onChange={(v) => handleChange('rotation', 1, v)} />
+          <ScrubberInput label="Z" value={selectedObject.rotation[2]} onChange={(v) => handleChange('rotation', 2, v)} />
         </div>
       </div>
 
       <div className="mb-4">
         <label className="block text-xs font-bold text-gray-400 mb-1">Scale</label>
         <div className="flex gap-2">
-          <input 
-            type="number" 
-            step="0.1"
-            value={selectedObject.scale[0]} 
-            onChange={(e) => handleChange('scale', 0, parseFloat(e.target.value))}
-            className="w-full bg-gray-800 rounded px-2 py-1 text-sm text-center"
-          />
-          <input 
-            type="number" 
-            step="0.1"
-            value={selectedObject.scale[1]} 
-            onChange={(e) => handleChange('scale', 1, parseFloat(e.target.value))}
-            className="w-full bg-gray-800 rounded px-2 py-1 text-sm text-center"
-          />
-          <input 
-            type="number" 
-            step="0.1"
-            value={selectedObject.scale[2]} 
-            onChange={(e) => handleChange('scale', 2, parseFloat(e.target.value))}
-            className="w-full bg-gray-800 rounded px-2 py-1 text-sm text-center"
-          />
+          <ScrubberInput label="X" value={selectedObject.scale[0]} onChange={(v) => handleChange('scale', 0, v)} />
+          <ScrubberInput label="Y" value={selectedObject.scale[1]} onChange={(v) => handleChange('scale', 1, v)} />
+          <ScrubberInput label="Z" value={selectedObject.scale[2]} onChange={(v) => handleChange('scale', 2, v)} />
         </div>
       </div>
 
@@ -165,6 +115,17 @@ export const PropertiesPanel: React.FC = () => {
             />
           </div>
         </div>
+      </div>
+
+      <div className="mb-4">
+        <label className="block text-xs font-bold text-gray-400 mb-1">Texture URL</label>
+        <input
+          type="text"
+          value={selectedObject.textureUrl || ''}
+          onChange={(e) => updateObject(selectedObject.id, { textureUrl: e.target.value })}
+          placeholder="https://example.com/image.jpg"
+          className="w-full bg-gray-800 text-white rounded px-2 py-1 text-sm border border-gray-700 focus:outline-none focus:border-blue-500"
+        />
       </div>
 
       <div className="mt-8 pt-4 border-t border-gray-700">

@@ -1,8 +1,20 @@
-import React, { useRef } from 'react';
-import { TransformControls } from '@react-three/drei';
+import React, { useRef, Suspense } from 'react';
+import { TransformControls, useTexture } from '@react-three/drei';
 import { Mesh } from 'three';
 import { useStore } from '../../store/useStore';
 import type { SceneObject } from '../../types/store';
+
+interface TexturedMaterialProps {
+  url: string;
+  color: string;
+  roughness: number;
+  metalness: number;
+}
+
+const TexturedMaterial: React.FC<TexturedMaterialProps> = ({ url, color, roughness, metalness }) => {
+  const texture = useTexture(url);
+  return <meshStandardMaterial map={texture} color={color} roughness={roughness} metalness={metalness} />;
+};
 
 interface ObjectWrapperProps {
   obj: SceneObject;
@@ -44,11 +56,23 @@ export const ObjectWrapper: React.FC<ObjectWrapperProps> = ({ obj }) => {
         {obj.type === 'box' && <boxGeometry args={[1, 1, 1]} />}
         {obj.type === 'sphere' && <sphereGeometry args={[0.5, 32, 32]} />}
         {obj.type === 'plane' && <planeGeometry args={[2, 2]} />}
-        <meshStandardMaterial
-          color={isSelected ? '#ff0055' : obj.color}
-          roughness={obj.roughness}
-          metalness={obj.metalness}
-        />
+        
+        <Suspense fallback={<meshStandardMaterial color={isSelected ? '#ff0055' : obj.color} roughness={obj.roughness} metalness={obj.metalness} />}>
+            {obj.textureUrl ? (
+                <TexturedMaterial 
+                    url={obj.textureUrl} 
+                    color={isSelected ? '#ff0055' : obj.color} 
+                    roughness={obj.roughness} 
+                    metalness={obj.metalness} 
+                />
+            ) : (
+                <meshStandardMaterial
+                    color={isSelected ? '#ff0055' : obj.color}
+                    roughness={obj.roughness}
+                    metalness={obj.metalness}
+                />
+            )}
+        </Suspense>
       </mesh>
       {isSelected && meshRef.current && (
         <TransformControls

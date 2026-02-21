@@ -1,6 +1,6 @@
 import React, { useRef } from 'react';
 import { Canvas } from '@react-three/fiber';
-import { OrbitControls, Environment } from '@react-three/drei';
+import { OrbitControls, Environment, ContactShadows } from '@react-three/drei';
 import { Group } from 'three';
 import { useStore } from '../../store/useStore';
 import { ObjectWrapper } from './ObjectWrapper';
@@ -21,7 +21,17 @@ export const Scene: React.FC = () => {
       <ambientLight intensity={0.5} />
       <pointLight position={[10, 10, 10]} castShadow />
       <Environment preset="city" />
-      <gridHelper args={[20, 20, 0x444444, 0x222222]} />
+      <group position={[0, -0.01, 0]}>
+        <gridHelper args={[20, 20, 0x444444, 0x222222]} />
+        <ContactShadows 
+          opacity={0.5} 
+          scale={20} 
+          blur={2} 
+          far={4} 
+          resolution={256} 
+          color="#000000" 
+        />
+      </group>
       <OrbitControls makeDefault />
       
       <group ref={sceneGroupRef}>
