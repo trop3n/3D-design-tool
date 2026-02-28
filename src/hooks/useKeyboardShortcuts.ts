@@ -1,11 +1,6 @@
 import { useEffect } from 'react';
 import { useStore } from '../store/useStore';
-
-interface TemporalStore {
-  temporal: {
-    getState: () => { undo: () => void; redo: () => void };
-  };
-}
+import { undo, redo } from './useTemporalStore';
 
 export const useKeyboardShortcuts = () => {
   const setTransformMode = useStore((state) => state.setTransformMode);
@@ -21,15 +16,15 @@ export const useKeyboardShortcuts = () => {
     const handleKeyDown = (e: KeyboardEvent) => {
       if ((e.metaKey || e.ctrlKey) && e.key === 'z') {
         if (e.shiftKey) {
-          (useStore as unknown as TemporalStore).temporal.getState().redo();
+          redo();
         } else {
-          (useStore as unknown as TemporalStore).temporal.getState().undo();
+          undo();
         }
         return;
       }
 
       if ((e.metaKey || e.ctrlKey) && e.key === 'y') {
-        (useStore as unknown as TemporalStore).temporal.getState().redo();
+        redo();
         return;
       }
 

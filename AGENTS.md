@@ -12,10 +12,12 @@ This is a **3D design tool** built with React, TypeScript, and Three.js (React T
 npm run dev          # Start development server with hot reload
 npm run build        # Type-check with tsc -b, then build with Vite
 npm run lint         # Run ESLint on the entire project
+npm run test         # Run tests in watch mode
+npm run test:run     # Run tests once
 npm run preview      # Preview production build locally
 ```
 
-**Note:** No test framework is currently configured. If tests are added, prefer Vitest (Vite-native).
+**Test Framework:** Vitest with node environment. Test files use `.test.ts` or `.test.tsx` suffix.
 
 ## Code Style Guidelines
 
@@ -106,9 +108,11 @@ The store uses two middleware layers:
 - **temporal** (Zundo) - enables undo/redo
 
 ```typescript
-// Access temporal state for undo/redo
-(useStore as any).temporal.getState().undo();
-(useStore as any).temporal.getState().redo();
+// Access temporal state for undo/redo using the useTemporalStore hook
+import { undo, redo } from '../hooks/useTemporalStore';
+
+// Or use the hook directly
+const { undo, redo } = useTemporalStore();
 ```
 
 ### Error Handling
@@ -175,8 +179,10 @@ src/
 ├── components/
 │   ├── ui/               # UI panels and inputs
 │   └── viewport/         # 3D scene components
+├── constants/            # Shared constants (colors, defaults)
 ├── hooks/                # Custom React hooks
 ├── store/                # Zustand state management
+├── test/                 # Test setup files
 └── types/                # TypeScript type definitions
 ```
 
@@ -198,4 +204,5 @@ src/
 
 1. Run `npm run lint` and fix all errors
 2. Run `npm run build` to verify type checking passes
-3. Test the dev server with `npm run dev`
+3. Run `npm run test:run` to verify tests pass
+4. Test the dev server with `npm run dev`

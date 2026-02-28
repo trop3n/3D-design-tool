@@ -1,12 +1,7 @@
 import React from 'react';
 import { useStore } from '../../store/useStore';
+import { undo, redo } from '../../hooks/useTemporalStore';
 import { Box, Circle, Square, Move, RotateCw, Scaling, Download, Undo2, Redo2, Triangle, CircleDot, Pill, Cylinder, Magnet, Copy, Clipboard, CopyPlus } from 'lucide-react';
-
-interface TemporalStore {
-  temporal: {
-    getState: () => { undo: () => void; redo: () => void };
-  };
-}
 
 export const Toolbar: React.FC = () => {
   const addObject = useStore((state) => state.addObject);
@@ -20,13 +15,8 @@ export const Toolbar: React.FC = () => {
   const pasteObjects = useStore((state) => state.pasteObjects);
   const duplicateSelectedObjects = useStore((state) => state.duplicateSelectedObjects);
 
-  const handleUndo = () => {
-    (useStore as unknown as TemporalStore).temporal.getState().undo();
-  };
-
-  const handleRedo = () => {
-    (useStore as unknown as TemporalStore).temporal.getState().redo();
-  };
+  const handleUndo = () => undo();
+  const handleRedo = () => redo();
 
   return (
     <div className="absolute top-4 left-1/2 transform -translate-x-1/2 flex gap-4 p-2 bg-gray-800 rounded-lg shadow-lg z-10">

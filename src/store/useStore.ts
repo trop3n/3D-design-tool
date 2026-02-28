@@ -3,6 +3,52 @@ import { persist } from 'zustand/middleware';
 import { temporal } from 'zundo';
 import { v4 as uuidv4 } from 'uuid';
 import type { AppState, SceneObject, SceneLight, CameraBookmark, ShapeType, LightType } from '../types/store';
+import {
+  DEFAULT_COLOR,
+  DEFAULT_ROUGHNESS,
+  DEFAULT_METALNESS,
+  DEFAULT_POSITION,
+  DEFAULT_ROTATION,
+  DEFAULT_SCALE,
+  DEFAULT_LIGHT_POSITION,
+  NEW_LIGHT_POSITION,
+  DEFAULT_AMBIENT_INTENSITY,
+  DEFAULT_DIRECTIONAL_INTENSITY,
+  PASTE_OFFSET,
+  STORAGE_KEY,
+  UNDO_HISTORY_LIMIT,
+  DEFAULT_SNAP_SIZE,
+} from '../constants/scene';
+
+const createObjectCopy = (obj: SceneObject, offset: number): SceneObject => ({
+  ...obj,
+  id: uuidv4(),
+  name: `${obj.name} (copy)`,
+  position: [obj.position[0] + offset, obj.position[1], obj.position[2] + offset] as [number, number, number],
+});
+
+const createDefaultObject = (type: ShapeType): SceneObject => ({
+  id: uuidv4(),
+  type,
+  name: `${type.charAt(0).toUpperCase() + type.slice(1)}`,
+  position: DEFAULT_POSITION,
+  rotation: DEFAULT_ROTATION,
+  scale: DEFAULT_SCALE,
+  color: DEFAULT_COLOR,
+  roughness: DEFAULT_ROUGHNESS,
+  metalness: DEFAULT_METALNESS,
+  textureUrl: '',
+});
+
+const createDefaultLight = (type: LightType): SceneLight => ({
+  id: uuidv4(),
+  type,
+  name: `${type.charAt(0).toUpperCase() + type.slice(1)}`,
+  color: DEFAULT_COLOR,
+  intensity: type === 'ambient' ? DEFAULT_AMBIENT_INTENSITY : DEFAULT_DIRECTIONAL_INTENSITY,
+  position: NEW_LIGHT_POSITION,
+  castShadow: type !== 'ambient',
+});
 
 export const useStore = create<AppState>()(
   temporal(
@@ -14,18 +60,18 @@ export const useStore = create<AppState>()(
             id: 'ambient-default',
             type: 'ambient' as LightType,
             name: 'Ambient',
-            color: '#ffffff',
-            intensity: 0.5,
-            position: [0, 0, 0],
+            color: DEFAULT_COLOR,
+            intensity: DEFAULT_AMBIENT_INTENSITY,
+            position: DEFAULT_POSITION,
             castShadow: false,
           },
           {
             id: 'directional-default',
             type: 'directional' as LightType,
             name: 'Sun',
-            color: '#ffffff',
-            intensity: 1,
-            position: [5, 10, 5],
+            color: DEFAULT_COLOR,
+            intensity: DEFAULT_DIRECTIONAL_INTENSITY,
+            position: DEFAULT_LIGHT_POSITION,
             castShadow: true,
           },
         ],
@@ -34,23 +80,12 @@ export const useStore = create<AppState>()(
         selectedLightId: null,
         transformMode: 'translate',
         snapEnabled: false,
-        snapSize: 0.5,
+        snapSize: DEFAULT_SNAP_SIZE,
         isExporting: false,
         clipboard: [],
         addObject: (type: ShapeType) =>
           set((state) => {
-            const newObject: SceneObject = {
-              id: uuidv4(),
-              type,
-              name: `${type.charAt(0).toUpperCase() + type.slice(1)}`,
-              position: [0, 0, 0],
-              rotation: [0, 0, 0],
-              scale: [1, 1, 1],
-              color: '#ffffff',
-              roughness: 0.5,
-              metalness: 0.5,
-              textureUrl: '',
-            };
+            const newObject = createDefaultObject(type);
             return { objects: [...state.objects, newObject], selectedIds: [newObject.id] };
           }),
         selectObject: (id, multi = false) =>
@@ -108,12 +143,7 @@ export const useStore = create<AppState>()(
         pasteObjects: () =>
           set((state) => {
             if (state.clipboard.length === 0) return state;
-            const newObjects = state.clipboard.map((obj) => ({
-              ...obj,
-              id: uuidv4(),
-              name: `${obj.name} (copy)`,
-              position: [obj.position[0] + 1, obj.position[1], obj.position[2] + 1] as [number, number, number],
-            }));
+            const newObjects = state.clipboard.map((obj) => createObjectCopy(obj, PASTE_OFFSET));
             return {
               objects: [...state.objects, ...newObjects],
               selectedIds: newObjects.map((obj) => obj.id),
@@ -123,12 +153,7 @@ export const useStore = create<AppState>()(
           set((state) => {
             const selectedObjects = state.objects.filter((obj) => state.selectedIds.includes(obj.id));
             if (selectedObjects.length === 0) return state;
-            const newObjects = selectedObjects.map((obj) => ({
-              ...obj,
-              id: uuidv4(),
-              name: `${obj.name} (copy)`,
-              position: [obj.position[0] + 1, obj.position[1], obj.position[2] + 1] as [number, number, number],
-            }));
+            const newObjects = selectedObjects.map((obj) => createObjectCopy(obj, PASTE_OFFSET));
             return {
               objects: [...state.objects, ...newObjects],
               selectedIds: newObjects.map((obj) => obj.id),
@@ -136,15 +161,7 @@ export const useStore = create<AppState>()(
           }),
         addLight: (type: LightType) =>
           set((state) => {
-            const newLight: SceneLight = {
-              id: uuidv4(),
-              type,
-              name: `${type.charAt(0).toUpperCase() + type.slice(1)}`,
-              color: '#ffffff',
-              intensity: type === 'ambient' ? 0.5 : 1,
-              position: [5, 5, 5],
-              castShadow: type !== 'ambient',
-            };
+            const newLight = createDefaultLight(type);
             return { lights: [...state.lights, newLight], selectedLightId: newLight.id };
           }),
         selectLight: (id) => set({ selectedLightId: id, selectedIds: [] }),
@@ -175,13 +192,13 @@ export const useStore = create<AppState>()(
           })),
       }),
       {
-        name: '3d-design-tool-storage', // unique name
-        partialize: (state) => ({ objects: state.objects }), // persist only objects
+        name: STORAGE_KEY,
+        partialize: (state) => ({ objects: state.objects }),
       }
     ),
     {
-      limit: 100,
-      partialize: (state) => ({ objects: state.objects }), // Only undo/redo object changes
+      limit: UNDO_HISTORY_LIMIT,
+      partialize: (state) => ({ objects: state.objects }),
     }
   )
 );
