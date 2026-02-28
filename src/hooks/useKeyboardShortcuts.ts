@@ -1,6 +1,12 @@
 import { useEffect } from 'react';
 import { useStore } from '../store/useStore';
 
+interface TemporalStore {
+  temporal: {
+    getState: () => { undo: () => void; redo: () => void };
+  };
+}
+
 export const useKeyboardShortcuts = () => {
   const setTransformMode = useStore((state) => state.setTransformMode);
   const deleteObject = useStore((state) => state.deleteObject);
@@ -8,23 +14,20 @@ export const useKeyboardShortcuts = () => {
 
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
-      // Handle Undo/Redo separately to respect focus or global shortcuts
       if ((e.metaKey || e.ctrlKey) && e.key === 'z') {
         if (e.shiftKey) {
-          (useStore as any).temporal.getState().redo();
+          (useStore as unknown as TemporalStore).temporal.getState().redo();
         } else {
-          (useStore as any).temporal.getState().undo();
+          (useStore as unknown as TemporalStore).temporal.getState().undo();
         }
-        return; // Prevent other actions
-      }
-
-      if ((e.metaKey || e.ctrlKey) && e.key === 'y') {
-        (useStore as any).temporal.getState().redo();
         return;
       }
 
-      // Ignore if typing in an input (except for undo/redo which might be desired globally, 
-      // but usually browser handles text input undo. Let's keep the exclusion for now.)
+      if ((e.metaKey || e.ctrlKey) && e.key === 'y') {
+        (useStore as unknown as TemporalStore).temporal.getState().redo();
+        return;
+      }
+
       if (e.target instanceof HTMLInputElement || e.target instanceof HTMLTextAreaElement) {
         return;
       }

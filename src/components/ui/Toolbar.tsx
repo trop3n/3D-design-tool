@@ -1,6 +1,12 @@
 import React from 'react';
 import { useStore } from '../../store/useStore';
-import { Box, Circle, Square, Move, RotateCw, Scaling, Download, Undo2, Redo2 } from 'lucide-react';
+import { Box, Circle, Square, Move, RotateCw, Scaling, Download, Undo2, Redo2, Triangle, CircleDot, Pill, Cylinder } from 'lucide-react';
+
+interface TemporalStore {
+  temporal: {
+    getState: () => { undo: () => void; redo: () => void };
+  };
+}
 
 export const Toolbar: React.FC = () => {
   const addObject = useStore((state) => state.addObject);
@@ -9,11 +15,11 @@ export const Toolbar: React.FC = () => {
   const setIsExporting = useStore((state) => state.setIsExporting);
 
   const handleUndo = () => {
-    (useStore as any).temporal.getState().undo();
+    (useStore as unknown as TemporalStore).temporal.getState().undo();
   };
 
   const handleRedo = () => {
-    (useStore as any).temporal.getState().redo();
+    (useStore as unknown as TemporalStore).temporal.getState().redo();
   };
 
   return (
@@ -78,6 +84,34 @@ export const Toolbar: React.FC = () => {
           title="Add Plane"
         >
           <Square size={24} color="white" />
+        </button>
+        <button 
+          onClick={() => addObject('cylinder')}
+          className="p-2 hover:bg-gray-700 rounded transition-colors"
+          title="Add Cylinder"
+        >
+          <Cylinder size={24} color="white" />
+        </button>
+        <button 
+          onClick={() => addObject('cone')}
+          className="p-2 hover:bg-gray-700 rounded transition-colors"
+          title="Add Cone"
+        >
+          <Triangle size={24} color="white" />
+        </button>
+        <button 
+          onClick={() => addObject('torus')}
+          className="p-2 hover:bg-gray-700 rounded transition-colors"
+          title="Add Torus"
+        >
+          <CircleDot size={24} color="white" />
+        </button>
+        <button 
+          onClick={() => addObject('capsule')}
+          className="p-2 hover:bg-gray-700 rounded transition-colors"
+          title="Add Capsule"
+        >
+          <Pill size={24} color="white" />
         </button>
       </div>
       <div className="flex gap-2 pl-2">

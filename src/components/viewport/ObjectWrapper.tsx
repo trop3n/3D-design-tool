@@ -1,4 +1,4 @@
-import React, { useRef, Suspense } from 'react';
+import React, { Suspense, useState } from 'react';
 import { TransformControls, useTexture } from '@react-three/drei';
 import { Mesh } from 'three';
 import { useStore } from '../../store/useStore';
@@ -16,12 +16,28 @@ const TexturedMaterial: React.FC<TexturedMaterialProps> = ({ url, color, roughne
   return <meshStandardMaterial map={texture} color={color} roughness={roughness} metalness={metalness} />;
 };
 
+interface TransformControlsWrapperProps {
+  mesh: Mesh;
+  transformMode: 'translate' | 'rotate' | 'scale';
+  onTransformEnd: () => void;
+}
+
+const TransformControlsWrapper: React.FC<TransformControlsWrapperProps> = ({ mesh, transformMode, onTransformEnd }) => {
+  return (
+    <TransformControls
+      object={mesh}
+      mode={transformMode}
+      onMouseUp={onTransformEnd}
+    />
+  );
+};
+
 interface ObjectWrapperProps {
   obj: SceneObject;
 }
 
 export const ObjectWrapper: React.FC<ObjectWrapperProps> = ({ obj }) => {
-  const meshRef = useRef<Mesh>(null);
+  const [mesh, setMesh] = useState<Mesh | null>(null);
   const selectedId = useStore((state) => state.selectedId);
   const selectObject = useStore((state) => state.selectObject);
   const updateObject = useStore((state) => state.updateObject);
@@ -29,17 +45,17 @@ export const ObjectWrapper: React.FC<ObjectWrapperProps> = ({ obj }) => {
 
   const isSelected = selectedId === obj.id;
 
-  const handleClick = (e: any) => {
+  const handleClick = (e: { stopPropagation: () => void }) => {
     e.stopPropagation();
     selectObject(obj.id);
   };
 
   const handleTransformEnd = () => {
-    if (meshRef.current) {
+    if (mesh) {
       updateObject(obj.id, {
-        position: [meshRef.current.position.x, meshRef.current.position.y, meshRef.current.position.z],
-        rotation: [meshRef.current.rotation.x, meshRef.current.rotation.y, meshRef.current.rotation.z],
-        scale: [meshRef.current.scale.x, meshRef.current.scale.y, meshRef.current.scale.z],
+        position: [mesh.position.x, mesh.position.y, mesh.position.z],
+        rotation: [mesh.rotation.x, mesh.rotation.y, mesh.rotation.z],
+        scale: [mesh.scale.x, mesh.scale.y, mesh.scale.z],
       });
     }
   };
@@ -47,7 +63,7 @@ export const ObjectWrapper: React.FC<ObjectWrapperProps> = ({ obj }) => {
   return (
     <>
       <mesh
-        ref={meshRef}
+        ref={setMesh}
         position={obj.position}
         rotation={obj.rotation}
         scale={obj.scale}
@@ -56,6 +72,10 @@ export const ObjectWrapper: React.FC<ObjectWrapperProps> = ({ obj }) => {
         {obj.type === 'box' && <boxGeometry args={[1, 1, 1]} />}
         {obj.type === 'sphere' && <sphereGeometry args={[0.5, 32, 32]} />}
         {obj.type === 'plane' && <planeGeometry args={[2, 2]} />}
+        {obj.type === 'cylinder' && <cylinderGeometry args={[0.5, 0.5, 1, 32]} />}
+        {obj.type === 'cone' && <coneGeometry args={[0.5, 1, 32]} />}
+        {obj.type === 'torus' && <torusGeometry args={[0.4, 0.15, 16, 48]} />}
+        {obj.type === 'capsule' && <capsuleGeometry args={[0.25, 0.5, 8, 16]} />}
         
         <Suspense fallback={<meshStandardMaterial color={isSelected ? '#ff0055' : obj.color} roughness={obj.roughness} metalness={obj.metalness} />}>
             {obj.textureUrl ? (
@@ -74,11 +94,11 @@ export const ObjectWrapper: React.FC<ObjectWrapperProps> = ({ obj }) => {
             )}
         </Suspense>
       </mesh>
-      {isSelected && meshRef.current && (
-        <TransformControls
-          object={meshRef.current}
-          mode={transformMode}
-          onMouseUp={handleTransformEnd}
+      {isSelected && mesh && (
+        <TransformControlsWrapper
+          mesh={mesh}
+          transformMode={transformMode}
+          onTransformEnd={handleTransformEnd}
         />
       )}
     </>

@@ -1,4 +1,23 @@
-export type ShapeType = 'box' | 'sphere' | 'plane';
+export type ShapeType = 'box' | 'sphere' | 'plane' | 'cylinder' | 'cone' | 'torus' | 'capsule';
+
+export type LightType = 'ambient' | 'directional' | 'point' | 'spot';
+
+export interface CameraBookmark {
+  id: string;
+  name: string;
+  position: [number, number, number];
+  target: [number, number, number];
+}
+
+export interface SceneLight {
+  id: string;
+  type: LightType;
+  name: string;
+  color: string;
+  intensity: number;
+  position: [number, number, number];
+  castShadow: boolean;
+}
 
 export interface SceneObject {
   id: string;
@@ -15,7 +34,10 @@ export interface SceneObject {
 
 export interface AppState {
   objects: SceneObject[];
+  lights: SceneLight[];
+  cameraBookmarks: CameraBookmark[];
   selectedId: string | null;
+  selectedLightId: string | null;
   transformMode: 'translate' | 'rotate' | 'scale';
   isExporting: boolean;
   addObject: (type: ShapeType) => void;
@@ -24,4 +46,10 @@ export interface AppState {
   setIsExporting: (isExporting: boolean) => void;
   updateObject: (id: string, updates: Partial<SceneObject>) => void;
   deleteObject: (id: string) => void;
+  addLight: (type: LightType) => void;
+  selectLight: (id: string | null) => void;
+  updateLight: (id: string, updates: Partial<SceneLight>) => void;
+  deleteLight: (id: string) => void;
+  addCameraBookmark: (name: string, position: [number, number, number], target: [number, number, number]) => void;
+  deleteCameraBookmark: (id: string) => void;
 }

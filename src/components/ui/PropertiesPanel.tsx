@@ -118,14 +118,57 @@ export const PropertiesPanel: React.FC = () => {
       </div>
 
       <div className="mb-4">
-        <label className="block text-xs font-bold text-gray-400 mb-1">Texture URL</label>
-        <input
-          type="text"
-          value={selectedObject.textureUrl || ''}
-          onChange={(e) => updateObject(selectedObject.id, { textureUrl: e.target.value })}
-          placeholder="https://example.com/image.jpg"
-          className="w-full bg-gray-800 text-white rounded px-2 py-1 text-sm border border-gray-700 focus:outline-none focus:border-blue-500"
-        />
+        <label className="block text-xs font-bold text-gray-400 mb-1">Texture</label>
+        <div className="space-y-2">
+          <input
+            type="text"
+            value={selectedObject.textureUrl || ''}
+            onChange={(e) => updateObject(selectedObject.id, { textureUrl: e.target.value })}
+            placeholder="https://example.com/image.jpg"
+            className="w-full bg-gray-800 text-white rounded px-2 py-1 text-sm border border-gray-700 focus:outline-none focus:border-blue-500"
+          />
+          <div className="flex gap-2">
+            <label className="flex-1 bg-gray-700 hover:bg-gray-600 text-white text-center py-1 px-2 rounded cursor-pointer text-sm transition-colors">
+              Upload Image
+              <input
+                type="file"
+                accept="image/*"
+                onChange={(e) => {
+                  const file = e.target.files?.[0];
+                  if (file) {
+                    const reader = new FileReader();
+                    reader.onload = (event) => {
+                      const dataUrl = event.target?.result as string;
+                      updateObject(selectedObject.id, { textureUrl: dataUrl });
+                    };
+                    reader.readAsDataURL(file);
+                  }
+                }}
+                className="hidden"
+              />
+            </label>
+            {selectedObject.textureUrl && (
+              <button
+                onClick={() => updateObject(selectedObject.id, { textureUrl: '' })}
+                className="bg-gray-700 hover:bg-gray-600 text-white py-1 px-2 rounded text-sm transition-colors"
+              >
+                Clear
+              </button>
+            )}
+          </div>
+          {selectedObject.textureUrl && (
+            <div className="mt-2">
+              <img 
+                src={selectedObject.textureUrl} 
+                alt="Texture preview" 
+                className="w-full h-20 object-cover rounded border border-gray-700"
+                onError={(e) => {
+                  (e.target as HTMLImageElement).style.display = 'none';
+                }}
+              />
+            </div>
+          )}
+        </div>
       </div>
 
       <div className="mt-8 pt-4 border-t border-gray-700">
