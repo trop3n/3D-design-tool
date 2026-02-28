@@ -30,10 +30,13 @@ export const useStore = create<AppState>()(
           },
         ],
         cameraBookmarks: [],
-        selectedId: null,
+        selectedIds: [],
         selectedLightId: null,
         transformMode: 'translate',
+        snapEnabled: false,
+        snapSize: 0.5,
         isExporting: false,
+        clipboard: [],
         addObject: (type: ShapeType) =>
           set((state) => {
             const newObject: SceneObject = {
@@ -43,14 +46,36 @@ export const useStore = create<AppState>()(
               position: [0, 0, 0],
               rotation: [0, 0, 0],
               scale: [1, 1, 1],
-                      color: '#ffffff', // Default white
-                      roughness: 0.5,
-                      metalness: 0.5,
-                      textureUrl: '',
-                    };            return { objects: [...state.objects, newObject], selectedId: newObject.id };
+              color: '#ffffff',
+              roughness: 0.5,
+              metalness: 0.5,
+              textureUrl: '',
+            };
+            return { objects: [...state.objects, newObject], selectedIds: [newObject.id] };
           }),
-        selectObject: (id) => set({ selectedId: id }),
+        selectObject: (id, multi = false) =>
+          set((state) => {
+            if (id === null) {
+              return { selectedIds: [] };
+            }
+            if (multi) {
+              const isSelected = state.selectedIds.includes(id);
+              return {
+                selectedIds: isSelected
+                  ? state.selectedIds.filter((sid) => sid !== id)
+                  : [...state.selectedIds, id],
+              };
+            }
+            return { selectedIds: [id] };
+          }),
+        selectAll: () =>
+          set((state) => ({
+            selectedIds: state.objects.map((obj) => obj.id),
+          })),
+        deselectAll: () => set({ selectedIds: [] }),
         setTransformMode: (mode) => set({ transformMode: mode }),
+        setSnapEnabled: (enabled) => set({ snapEnabled: enabled }),
+        setSnapSize: (size) => set({ snapSize: size }),
         setIsExporting: (isExporting) => set({ isExporting }),
         updateObject: (id, updates) =>
           set((state) => ({
@@ -58,11 +83,57 @@ export const useStore = create<AppState>()(
               obj.id === id ? { ...obj, ...updates } : obj
             ),
           })),
+        updateSelectedObjects: (updates) =>
+          set((state) => ({
+            objects: state.objects.map((obj) =>
+              state.selectedIds.includes(obj.id) ? { ...obj, ...updates } : obj
+            ),
+          })),
         deleteObject: (id) =>
           set((state) => ({
             objects: state.objects.filter((obj) => obj.id !== id),
-            selectedId: state.selectedId === id ? null : state.selectedId,
+            selectedIds: state.selectedIds.filter((sid) => sid !== id),
           })),
+        deleteSelectedObjects: () =>
+          set((state) => ({
+            objects: state.objects.filter((obj) => !state.selectedIds.includes(obj.id)),
+            selectedIds: [],
+          })),
+        copySelectedObjects: () =>
+          set((state) => ({
+            clipboard: state.objects
+              .filter((obj) => state.selectedIds.includes(obj.id))
+              .map((obj) => ({ ...obj })),
+          })),
+        pasteObjects: () =>
+          set((state) => {
+            if (state.clipboard.length === 0) return state;
+            const newObjects = state.clipboard.map((obj) => ({
+              ...obj,
+              id: uuidv4(),
+              name: `${obj.name} (copy)`,
+              position: [obj.position[0] + 1, obj.position[1], obj.position[2] + 1] as [number, number, number],
+            }));
+            return {
+              objects: [...state.objects, ...newObjects],
+              selectedIds: newObjects.map((obj) => obj.id),
+            };
+          }),
+        duplicateSelectedObjects: () =>
+          set((state) => {
+            const selectedObjects = state.objects.filter((obj) => state.selectedIds.includes(obj.id));
+            if (selectedObjects.length === 0) return state;
+            const newObjects = selectedObjects.map((obj) => ({
+              ...obj,
+              id: uuidv4(),
+              name: `${obj.name} (copy)`,
+              position: [obj.position[0] + 1, obj.position[1], obj.position[2] + 1] as [number, number, number],
+            }));
+            return {
+              objects: [...state.objects, ...newObjects],
+              selectedIds: newObjects.map((obj) => obj.id),
+            };
+          }),
         addLight: (type: LightType) =>
           set((state) => {
             const newLight: SceneLight = {
@@ -76,7 +147,7 @@ export const useStore = create<AppState>()(
             };
             return { lights: [...state.lights, newLight], selectedLightId: newLight.id };
           }),
-        selectLight: (id) => set({ selectedLightId: id, selectedId: null }),
+        selectLight: (id) => set({ selectedLightId: id, selectedIds: [] }),
         updateLight: (id, updates) =>
           set((state) => ({
             lights: state.lights.map((light) =>

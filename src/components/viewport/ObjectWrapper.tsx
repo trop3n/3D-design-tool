@@ -19,14 +19,26 @@ const TexturedMaterial: React.FC<TexturedMaterialProps> = ({ url, color, roughne
 interface TransformControlsWrapperProps {
   mesh: Mesh;
   transformMode: 'translate' | 'rotate' | 'scale';
+  snapEnabled: boolean;
+  snapSize: number;
   onTransformEnd: () => void;
 }
 
-const TransformControlsWrapper: React.FC<TransformControlsWrapperProps> = ({ mesh, transformMode, onTransformEnd }) => {
+const TransformControlsWrapper: React.FC<TransformControlsWrapperProps> = ({ 
+  mesh, 
+  transformMode, 
+  snapEnabled,
+  snapSize,
+  onTransformEnd 
+}) => {
+  const snap = snapEnabled ? snapSize : undefined;
   return (
     <TransformControls
       object={mesh}
       mode={transformMode}
+      translationSnap={snap}
+      rotationSnap={snap ? snap * (Math.PI / 180) * 15 : undefined}
+      scaleSnap={snap}
       onMouseUp={onTransformEnd}
     />
   );
@@ -38,16 +50,19 @@ interface ObjectWrapperProps {
 
 export const ObjectWrapper: React.FC<ObjectWrapperProps> = ({ obj }) => {
   const [mesh, setMesh] = useState<Mesh | null>(null);
-  const selectedId = useStore((state) => state.selectedId);
+  const selectedIds = useStore((state) => state.selectedIds);
   const selectObject = useStore((state) => state.selectObject);
   const updateObject = useStore((state) => state.updateObject);
   const transformMode = useStore((state) => state.transformMode);
+  const snapEnabled = useStore((state) => state.snapEnabled);
+  const snapSize = useStore((state) => state.snapSize);
 
-  const isSelected = selectedId === obj.id;
+  const isSelected = selectedIds.includes(obj.id);
 
-  const handleClick = (e: { stopPropagation: () => void }) => {
+  const handleClick = (e: { stopPropagation: () => void; shiftKey: boolean; ctrlKey: boolean; metaKey: boolean }) => {
     e.stopPropagation();
-    selectObject(obj.id);
+    const isMultiSelect = e.shiftKey || e.ctrlKey || e.metaKey;
+    selectObject(obj.id, isMultiSelect);
   };
 
   const handleTransformEnd = () => {
@@ -94,10 +109,12 @@ export const ObjectWrapper: React.FC<ObjectWrapperProps> = ({ obj }) => {
             )}
         </Suspense>
       </mesh>
-      {isSelected && mesh && (
+      {isSelected && mesh && selectedIds.length === 1 && (
         <TransformControlsWrapper
           mesh={mesh}
           transformMode={transformMode}
+          snapEnabled={snapEnabled}
+          snapSize={snapSize}
           onTransformEnd={handleTransformEnd}
         />
       )}

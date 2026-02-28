@@ -1,6 +1,6 @@
 import React from 'react';
 import { useStore } from '../../store/useStore';
-import { Box, Circle, Square, Move, RotateCw, Scaling, Download, Undo2, Redo2, Triangle, CircleDot, Pill, Cylinder } from 'lucide-react';
+import { Box, Circle, Square, Move, RotateCw, Scaling, Download, Undo2, Redo2, Triangle, CircleDot, Pill, Cylinder, Magnet, Copy, Clipboard, CopyPlus } from 'lucide-react';
 
 interface TemporalStore {
   temporal: {
@@ -13,6 +13,12 @@ export const Toolbar: React.FC = () => {
   const transformMode = useStore((state) => state.transformMode);
   const setTransformMode = useStore((state) => state.setTransformMode);
   const setIsExporting = useStore((state) => state.setIsExporting);
+  const snapEnabled = useStore((state) => state.snapEnabled);
+  const setSnapEnabled = useStore((state) => state.setSnapEnabled);
+  const selectedIds = useStore((state) => state.selectedIds);
+  const copySelectedObjects = useStore((state) => state.copySelectedObjects);
+  const pasteObjects = useStore((state) => state.pasteObjects);
+  const duplicateSelectedObjects = useStore((state) => state.duplicateSelectedObjects);
 
   const handleUndo = () => {
     (useStore as unknown as TemporalStore).temporal.getState().undo();
@@ -44,23 +50,55 @@ export const Toolbar: React.FC = () => {
         <button 
           onClick={() => setTransformMode('translate')}
           className={`p-2 rounded transition-colors ${transformMode === 'translate' ? 'bg-blue-600' : 'hover:bg-gray-700'}`}
-          title="Translate"
+          title="Translate (T)"
         >
           <Move size={20} color="white" />
         </button>
         <button 
           onClick={() => setTransformMode('rotate')}
           className={`p-2 rounded transition-colors ${transformMode === 'rotate' ? 'bg-blue-600' : 'hover:bg-gray-700'}`}
-          title="Rotate"
+          title="Rotate (R)"
         >
           <RotateCw size={20} color="white" />
         </button>
         <button 
           onClick={() => setTransformMode('scale')}
           className={`p-2 rounded transition-colors ${transformMode === 'scale' ? 'bg-blue-600' : 'hover:bg-gray-700'}`}
-          title="Scale"
+          title="Scale (S)"
         >
           <Scaling size={20} color="white" />
+        </button>
+        <button 
+          onClick={() => setSnapEnabled(!snapEnabled)}
+          className={`p-2 rounded transition-colors ${snapEnabled ? 'bg-blue-600' : 'hover:bg-gray-700'}`}
+          title="Snap to Grid"
+        >
+          <Magnet size={20} color="white" />
+        </button>
+      </div>
+      <div className="flex gap-2 border-r border-gray-600 pr-4">
+        <button 
+          onClick={copySelectedObjects}
+          className={`p-2 rounded transition-colors ${selectedIds.length === 0 ? 'opacity-50' : 'hover:bg-gray-700'}`}
+          title="Copy (Ctrl+C)"
+          disabled={selectedIds.length === 0}
+        >
+          <Copy size={20} color="white" />
+        </button>
+        <button 
+          onClick={pasteObjects}
+          className="p-2 hover:bg-gray-700 rounded transition-colors"
+          title="Paste (Ctrl+V)"
+        >
+          <Clipboard size={20} color="white" />
+        </button>
+        <button 
+          onClick={duplicateSelectedObjects}
+          className={`p-2 rounded transition-colors ${selectedIds.length === 0 ? 'opacity-50' : 'hover:bg-gray-700'}`}
+          title="Duplicate (Ctrl+D)"
+          disabled={selectedIds.length === 0}
+        >
+          <CopyPlus size={20} color="white" />
         </button>
       </div>
       <div className="flex gap-2 pl-2 border-r border-gray-600 pr-4">

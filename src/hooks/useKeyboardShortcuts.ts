@@ -9,8 +9,13 @@ interface TemporalStore {
 
 export const useKeyboardShortcuts = () => {
   const setTransformMode = useStore((state) => state.setTransformMode);
-  const deleteObject = useStore((state) => state.deleteObject);
-  const selectedId = useStore((state) => state.selectedId);
+  const deleteSelectedObjects = useStore((state) => state.deleteSelectedObjects);
+  const selectedIds = useStore((state) => state.selectedIds);
+  const copySelectedObjects = useStore((state) => state.copySelectedObjects);
+  const pasteObjects = useStore((state) => state.pasteObjects);
+  const duplicateSelectedObjects = useStore((state) => state.duplicateSelectedObjects);
+  const selectAll = useStore((state) => state.selectAll);
+  const deselectAll = useStore((state) => state.deselectAll);
 
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
@@ -32,6 +37,35 @@ export const useKeyboardShortcuts = () => {
         return;
       }
 
+      if ((e.metaKey || e.ctrlKey) && e.key === 'a') {
+        e.preventDefault();
+        selectAll();
+        return;
+      }
+
+      if ((e.metaKey || e.ctrlKey) && e.key === 'c') {
+        e.preventDefault();
+        copySelectedObjects();
+        return;
+      }
+
+      if ((e.metaKey || e.ctrlKey) && e.key === 'v') {
+        e.preventDefault();
+        pasteObjects();
+        return;
+      }
+
+      if ((e.metaKey || e.ctrlKey) && e.key === 'd') {
+        e.preventDefault();
+        duplicateSelectedObjects();
+        return;
+      }
+
+      if (e.key === 'Escape') {
+        deselectAll();
+        return;
+      }
+
       switch (e.key.toLowerCase()) {
         case 't':
           setTransformMode('translate');
@@ -44,8 +78,8 @@ export const useKeyboardShortcuts = () => {
           break;
         case 'delete':
         case 'backspace':
-          if (selectedId) {
-            deleteObject(selectedId);
+          if (selectedIds.length > 0) {
+            deleteSelectedObjects();
           }
           break;
       }
@@ -53,5 +87,5 @@ export const useKeyboardShortcuts = () => {
 
     window.addEventListener('keydown', handleKeyDown);
     return () => window.removeEventListener('keydown', handleKeyDown);
-  }, [setTransformMode, deleteObject, selectedId]);
+  }, [setTransformMode, deleteSelectedObjects, selectedIds, copySelectedObjects, pasteObjects, duplicateSelectedObjects, selectAll, deselectAll]);
 };
