@@ -4,6 +4,7 @@ import type { CameraControls } from './components/viewport/Scene';
 import { Toolbar } from './components/ui/Toolbar';
 import { PropertiesPanel } from './components/ui/PropertiesPanel';
 import { LightsPanel } from './components/ui/LightsPanel';
+import { InteractionPanel } from './components/ui/InteractionPanel';
 import { Outliner } from './components/ui/Outliner';
 import { CameraBookmarksPanel } from './components/ui/CameraBookmarksPanel';
 import { useKeyboardShortcuts } from './hooks/useKeyboardShortcuts';
@@ -11,7 +12,7 @@ import { useStore } from './store/useStore';
 
 function App() {
   useKeyboardShortcuts();
-  const [activeTab, setActiveTab] = useState<'properties' | 'lights'>('properties');
+  const [activeTab, setActiveTab] = useState<'properties' | 'lights' | 'interactions'>('properties');
   const cameraControlsRef = useRef<CameraControls | null>(null);
   const [cameraTarget, setCameraTarget] = useState<{ position: [number, number, number]; target: [number, number, number] } | null>(null);
   const addCameraBookmark = useStore((state) => state.addCameraBookmark);
@@ -52,27 +53,39 @@ function App() {
         <div className="flex border-b border-gray-700">
           <button
             onClick={() => setActiveTab('properties')}
-            className={`flex-1 py-2 text-sm font-medium transition-colors ${
+            className={`flex-1 py-2 text-xs font-medium transition-colors ${
               activeTab === 'properties' 
                 ? 'bg-gray-800 text-white border-b-2 border-blue-500' 
                 : 'text-gray-400 hover:text-white'
             }`}
           >
-            Properties
+            Props
           </button>
           <button
             onClick={() => setActiveTab('lights')}
-            className={`flex-1 py-2 text-sm font-medium transition-colors ${
+            className={`flex-1 py-2 text-xs font-medium transition-colors ${
               activeTab === 'lights' 
                 ? 'bg-gray-800 text-white border-b-2 border-blue-500' 
                 : 'text-gray-400 hover:text-white'
             }`}
           >
-            Lighting
+            Light
+          </button>
+          <button
+            onClick={() => setActiveTab('interactions')}
+            className={`flex-1 py-2 text-xs font-medium transition-colors ${
+              activeTab === 'interactions' 
+                ? 'bg-gray-800 text-white border-b-2 border-blue-500' 
+                : 'text-gray-400 hover:text-white'
+            }`}
+          >
+            Events
           </button>
         </div>
         <div className="flex-1 overflow-hidden">
-          {activeTab === 'properties' ? <PropertiesPanel /> : <LightsPanel />}
+          {activeTab === 'properties' && <PropertiesPanel />}
+          {activeTab === 'lights' && <LightsPanel />}
+          {activeTab === 'interactions' && <InteractionPanel />}
         </div>
       </div>
     </div>

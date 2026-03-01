@@ -2,7 +2,18 @@ import { create } from 'zustand';
 import { persist } from 'zustand/middleware';
 import { temporal } from 'zundo';
 import { v4 as uuidv4 } from 'uuid';
-import type { AppState, SceneObject, SceneLight, CameraBookmark, ShapeType, LightType } from '../types/store';
+import type { 
+  AppState, 
+  SceneObject, 
+  SceneLight, 
+  CameraBookmark, 
+  ShapeType, 
+  LightType,
+  ObjectInteraction,
+  ObjectState,
+  InteractionRule,
+  EventType,
+} from '../types/store';
 import {
   DEFAULT_COLOR,
   DEFAULT_ROUGHNESS,
@@ -53,7 +64,7 @@ const createDefaultLight = (type: LightType): SceneLight => ({
 export const useStore = create<AppState>()(
   temporal(
     persist(
-      (set) => ({
+      (set, get) => ({
         objects: [],
         lights: [
           {
@@ -76,12 +87,14 @@ export const useStore = create<AppState>()(
           },
         ],
         cameraBookmarks: [],
+        objectInteractions: [],
         selectedIds: [],
         selectedLightId: null,
         transformMode: 'translate',
         snapEnabled: false,
         snapSize: DEFAULT_SNAP_SIZE,
         isExporting: false,
+        isPlayMode: false,
         clipboard: [],
         addObject: (type: ShapeType) =>
           set((state) => {
@@ -112,6 +125,7 @@ export const useStore = create<AppState>()(
         setSnapEnabled: (enabled) => set({ snapEnabled: enabled }),
         setSnapSize: (size) => set({ snapSize: size }),
         setIsExporting: (isExporting) => set({ isExporting }),
+        setIsPlayMode: (isPlayMode) => set({ isPlayMode }),
         updateObject: (id, updates) =>
           set((state) => ({
             objects: state.objects.map((obj) =>
@@ -128,11 +142,15 @@ export const useStore = create<AppState>()(
           set((state) => ({
             objects: state.objects.filter((obj) => obj.id !== id),
             selectedIds: state.selectedIds.filter((sid) => sid !== id),
+            objectInteractions: state.objectInteractions.filter((oi) => oi.objectId !== id),
           })),
         deleteSelectedObjects: () =>
           set((state) => ({
             objects: state.objects.filter((obj) => !state.selectedIds.includes(obj.id)),
             selectedIds: [],
+            objectInteractions: state.objectInteractions.filter(
+              (oi) => !state.selectedIds.includes(oi.objectId)
+            ),
           })),
         copySelectedObjects: () =>
           set((state) => ({
@@ -190,10 +208,165 @@ export const useStore = create<AppState>()(
           set((state) => ({
             cameraBookmarks: state.cameraBookmarks.filter((bookmark) => bookmark.id !== id),
           })),
+        getObjectInteraction: (objectId: string) => {
+          return get().objectInteractions.find((oi) => oi.objectId === objectId);
+        },
+        addObjectState: (objectId: string, stateData: Omit<ObjectState, 'id'>) =>
+          set((state) => {
+            const existingInteraction = state.objectInteractions.find(
+              (oi) => oi.objectId === objectId
+            );
+            if (existingInteraction) {
+              return {
+                objectInteractions: state.objectInteractions.map((oi) =>
+                  oi.objectId === objectId
+                    ? {
+                        ...oi,
+                        states: [...oi.states, { ...stateData, id: uuidv4() }],
+                      }
+                    : oi
+                ),
+              };
+            }
+            const newInteraction: ObjectInteraction = {
+              objectId,
+              states: [
+                { id: 'default', name: 'Default', properties: {}, isDefault: true },
+                { ...stateData, id: uuidv4() },
+              ],
+              currentStateId: 'default',
+              interactions: [],
+            };
+            return {
+              objectInteractions: [...state.objectInteractions, newInteraction],
+            };
+          }),
+        updateObjectState: (objectId: string, stateId: string, updates: Partial<ObjectState>) =>
+          set((state) => ({
+            objectInteractions: state.objectInteractions.map((oi) =>
+              oi.objectId === objectId
+                ? {
+                    ...oi,
+                    states: oi.states.map((s) =>
+                      s.id === stateId ? { ...s, ...updates } : s
+                    ),
+                  }
+                : oi
+            ),
+          })),
+        deleteObjectState: (objectId: string, stateId: string) =>
+          set((state) => ({
+            objectInteractions: state.objectInteractions.map((oi) =>
+              oi.objectId === objectId
+                ? {
+                    ...oi,
+                    states: oi.states.filter((s) => s.id !== stateId || s.isDefault),
+                    currentStateId: oi.currentStateId === stateId ? 'default' : oi.currentStateId,
+                  }
+                : oi
+            ),
+          })),
+        setObjectCurrentState: (objectId: string, stateId: string) =>
+          set((state) => {
+            const interaction = state.objectInteractions.find((oi) => oi.objectId === objectId);
+            if (!interaction) return state;
+            
+            const targetState = interaction.states.find((s) => s.id === stateId);
+            if (!targetState) return state;
+            
+            const obj = state.objects.find((o) => o.id === objectId);
+            if (!obj) return state;
+            
+            const updatedObject = { ...obj, ...targetState.properties };
+            
+            return {
+              objectInteractions: state.objectInteractions.map((oi) =>
+                oi.objectId === objectId ? { ...oi, currentStateId: stateId } : oi
+              ),
+              objects: state.objects.map((o) =>
+                o.id === objectId ? updatedObject : o
+              ),
+            };
+          }),
+        addInteractionRule: (objectId: string, rule: Omit<InteractionRule, 'id'>) =>
+          set((state) => {
+            const existingInteraction = state.objectInteractions.find(
+              (oi) => oi.objectId === objectId
+            );
+            const newRule: InteractionRule = { ...rule, id: uuidv4() };
+            
+            if (existingInteraction) {
+              return {
+                objectInteractions: state.objectInteractions.map((oi) =>
+                  oi.objectId === objectId
+                    ? { ...oi, interactions: [...oi.interactions, newRule] }
+                    : oi
+                ),
+              };
+            }
+            
+            const newInteraction: ObjectInteraction = {
+              objectId,
+              states: [{ id: 'default', name: 'Default', properties: {}, isDefault: true }],
+              currentStateId: 'default',
+              interactions: [newRule],
+            };
+            return {
+              objectInteractions: [...state.objectInteractions, newInteraction],
+            };
+          }),
+        updateInteractionRule: (objectId: string, ruleId: string, updates: Partial<InteractionRule>) =>
+          set((state) => ({
+            objectInteractions: state.objectInteractions.map((oi) =>
+              oi.objectId === objectId
+                ? {
+                    ...oi,
+                    interactions: oi.interactions.map((r) =>
+                      r.id === ruleId ? { ...r, ...updates } : r
+                    ),
+                  }
+                : oi
+            ),
+          })),
+        deleteInteractionRule: (objectId: string, ruleId: string) =>
+          set((state) => ({
+            objectInteractions: state.objectInteractions.map((oi) =>
+              oi.objectId === objectId
+                ? {
+                    ...oi,
+                    interactions: oi.interactions.filter((r) => r.id !== ruleId),
+                  }
+                : oi
+            ),
+          })),
+        triggerObjectEvent: (objectId: string, eventType: EventType) => {
+          const state = get();
+          const interaction = state.objectInteractions.find((oi) => oi.objectId === objectId);
+          if (!interaction) return;
+          
+          const matchingRules = interaction.interactions.filter(
+            (r) => r.enabled && r.event.type === eventType && r.event.enabled
+          );
+          
+          for (const rule of matchingRules) {
+            for (const action of rule.actions) {
+              if (action.delay > 0) {
+                setTimeout(() => {
+                  executeAction(get, action, objectId);
+                }, action.delay);
+              } else {
+                executeAction(get, action, objectId);
+              }
+            }
+          }
+        },
       }),
       {
         name: STORAGE_KEY,
-        partialize: (state) => ({ objects: state.objects }),
+        partialize: (state) => ({ 
+          objects: state.objects,
+          objectInteractions: state.objectInteractions,
+        }),
       }
     ),
     {
@@ -202,3 +375,41 @@ export const useStore = create<AppState>()(
     }
   )
 );
+
+const executeAction = (
+  get: () => AppState,
+  action: { 
+    type: string;
+    targetStateId?: string;
+    targetObjectId?: string;
+    duration: number;
+    easing: string;
+  },
+  sourceObjectId: string
+) => {
+  const state = get();
+  const targetId = action.targetObjectId || sourceObjectId;
+  
+  switch (action.type) {
+    case 'setState':
+      if (action.targetStateId) {
+        get().setObjectCurrentState(targetId, action.targetStateId);
+      }
+      break;
+    case 'toggleState': {
+      const interaction = state.objectInteractions.find((oi) => oi.objectId === targetId);
+      if (interaction && interaction.states.length > 1) {
+        const currentIndex = interaction.states.findIndex((s) => s.id === interaction.currentStateId);
+        const nextIndex = (currentIndex + 1) % interaction.states.length;
+        get().setObjectCurrentState(targetId, interaction.states[nextIndex].id);
+      }
+      break;
+    }
+    case 'resetScene': {
+      state.objects.forEach((obj) => {
+        get().setObjectCurrentState(obj.id, 'default');
+      });
+      break;
+    }
+  }
+};

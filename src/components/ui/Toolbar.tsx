@@ -1,7 +1,7 @@
 import React from 'react';
 import { useStore } from '../../store/useStore';
 import { undo, redo } from '../../hooks/useTemporalStore';
-import { Box, Circle, Square, Move, RotateCw, Scaling, Download, Undo2, Redo2, Triangle, CircleDot, Pill, Cylinder, Magnet, Copy, Clipboard, CopyPlus } from 'lucide-react';
+import { Box, Circle, Square, Move, RotateCw, Scaling, Download, Undo2, Redo2, Triangle, CircleDot, Pill, Cylinder, Magnet, Copy, Clipboard, CopyPlus, Play, Pause } from 'lucide-react';
 
 export const Toolbar: React.FC = () => {
   const addObject = useStore((state) => state.addObject);
@@ -14,6 +14,8 @@ export const Toolbar: React.FC = () => {
   const copySelectedObjects = useStore((state) => state.copySelectedObjects);
   const pasteObjects = useStore((state) => state.pasteObjects);
   const duplicateSelectedObjects = useStore((state) => state.duplicateSelectedObjects);
+  const isPlayMode = useStore((state) => state.isPlayMode);
+  const setIsPlayMode = useStore((state) => state.setIsPlayMode);
 
   const handleUndo = () => undo();
   const handleRedo = () => redo();
@@ -144,11 +146,18 @@ export const Toolbar: React.FC = () => {
       </div>
       <div className="flex gap-2 pl-2">
         <button 
+          onClick={() => setIsPlayMode(!isPlayMode)}
+          className={`p-2 rounded transition-colors ${isPlayMode ? 'bg-green-600' : 'hover:bg-gray-700'}`}
+          title={isPlayMode ? 'Exit Play Mode' : 'Play Mode'}
+        >
+          {isPlayMode ? <Pause size={20} color="white" /> : <Play size={20} color="white" />}
+        </button>
+        <button 
           onClick={() => setIsExporting(true)}
           className="p-2 hover:bg-gray-700 rounded transition-colors"
           title="Export GLTF"
         >
-          <Download size={24} color="white" />
+          <Download size={20} color="white" />
         </button>
       </div>
     </div>

@@ -1,8 +1,9 @@
-import React, { Suspense, useState } from 'react';
+import React, { Suspense, useState, memo, useCallback } from 'react';
 import { TransformControls, useTexture } from '@react-three/drei';
 import { Mesh } from 'three';
 import { useStore } from '../../store/useStore';
-import type { SceneObject } from '../../types/store';
+import type { SceneObject, EventType } from '../../types/store';
+import { SELECTION_COLOR } from '../../constants/scene';
 
 interface TexturedMaterialProps {
   url: string;
@@ -11,10 +12,12 @@ interface TexturedMaterialProps {
   metalness: number;
 }
 
-const TexturedMaterial: React.FC<TexturedMaterialProps> = ({ url, color, roughness, metalness }) => {
+const TexturedMaterial: React.FC<TexturedMaterialProps> = memo(({ url, color, roughness, metalness }) => {
   const texture = useTexture(url);
   return <meshStandardMaterial map={texture} color={color} roughness={roughness} metalness={metalness} />;
-};
+});
+
+TexturedMaterial.displayName = 'TexturedMaterial';
 
 interface TransformControlsWrapperProps {
   mesh: Mesh;
@@ -24,7 +27,7 @@ interface TransformControlsWrapperProps {
   onTransformEnd: () => void;
 }
 
-const TransformControlsWrapper: React.FC<TransformControlsWrapperProps> = ({ 
+const TransformControlsWrapper: React.FC<TransformControlsWrapperProps> = memo(({ 
   mesh, 
   transformMode, 
   snapEnabled,
@@ -42,30 +45,60 @@ const TransformControlsWrapper: React.FC<TransformControlsWrapperProps> = ({
       onMouseUp={onTransformEnd}
     />
   );
-};
+});
+
+TransformControlsWrapper.displayName = 'TransformControlsWrapper';
 
 interface ObjectWrapperProps {
   obj: SceneObject;
 }
 
-export const ObjectWrapper: React.FC<ObjectWrapperProps> = ({ obj }) => {
+const ObjectWrapperInner: React.FC<ObjectWrapperProps> = ({ obj }) => {
   const [mesh, setMesh] = useState<Mesh | null>(null);
-  const selectedIds = useStore((state) => state.selectedIds);
+  const [isHovered, setIsHovered] = useState(false);
+  
+  const isSelected = useStore(
+    useCallback((state) => state.selectedIds.includes(obj.id), [obj.id])
+  );
   const selectObject = useStore((state) => state.selectObject);
   const updateObject = useStore((state) => state.updateObject);
   const transformMode = useStore((state) => state.transformMode);
   const snapEnabled = useStore((state) => state.snapEnabled);
   const snapSize = useStore((state) => state.snapSize);
+  const selectedCount = useStore(
+    useCallback((state) => state.selectedIds.length, [])
+  );
+  const isPlayMode = useStore((state) => state.isPlayMode);
+  const triggerObjectEvent = useStore((state) => state.triggerObjectEvent);
 
-  const isSelected = selectedIds.includes(obj.id);
-
-  const handleClick = (e: { stopPropagation: () => void; shiftKey: boolean; ctrlKey: boolean; metaKey: boolean }) => {
+  const handleClick = useCallback((e: { stopPropagation: () => void; shiftKey: boolean; ctrlKey: boolean; metaKey: boolean }) => {
     e.stopPropagation();
-    const isMultiSelect = e.shiftKey || e.ctrlKey || e.metaKey;
-    selectObject(obj.id, isMultiSelect);
-  };
+    
+    if (isPlayMode) {
+      triggerObjectEvent(obj.id, 'click' as EventType);
+    } else {
+      const isMultiSelect = e.shiftKey || e.ctrlKey || e.metaKey;
+      selectObject(obj.id, isMultiSelect);
+    }
+  }, [obj.id, selectObject, isPlayMode, triggerObjectEvent]);
 
-  const handleTransformEnd = () => {
+  const handlePointerEnter = useCallback((e: { stopPropagation: () => void }) => {
+    e.stopPropagation();
+    setIsHovered(true);
+    if (isPlayMode) {
+      triggerObjectEvent(obj.id, 'mouseEnter' as EventType);
+    }
+  }, [obj.id, isPlayMode, triggerObjectEvent]);
+
+  const handlePointerLeave = useCallback((e: { stopPropagation: () => void }) => {
+    e.stopPropagation();
+    setIsHovered(false);
+    if (isPlayMode) {
+      triggerObjectEvent(obj.id, 'mouseLeave' as EventType);
+    }
+  }, [obj.id, isPlayMode, triggerObjectEvent]);
+
+  const handleTransformEnd = useCallback(() => {
     if (mesh) {
       updateObject(obj.id, {
         position: [mesh.position.x, mesh.position.y, mesh.position.z],
@@ -73,7 +106,16 @@ export const ObjectWrapper: React.FC<ObjectWrapperProps> = ({ obj }) => {
         scale: [mesh.scale.x, mesh.scale.y, mesh.scale.z],
       });
     }
+  }, [mesh, obj.id, updateObject]);
+
+  const getDisplayColor = () => {
+    if (isPlayMode) return obj.color;
+    if (isSelected) return SELECTION_COLOR;
+    if (isHovered) return '#ff6b9d';
+    return obj.color;
   };
+
+  const showTransformControls = !isPlayMode && isSelected && mesh && selectedCount === 1;
 
   return (
     <>
@@ -83,6 +125,8 @@ export const ObjectWrapper: React.FC<ObjectWrapperProps> = ({ obj }) => {
         rotation={obj.rotation}
         scale={obj.scale}
         onClick={handleClick}
+        onPointerEnter={handlePointerEnter}
+        onPointerLeave={handlePointerLeave}
       >
         {obj.type === 'box' && <boxGeometry args={[1, 1, 1]} />}
         {obj.type === 'sphere' && <sphereGeometry args={[0.5, 32, 32]} />}
@@ -92,24 +136,24 @@ export const ObjectWrapper: React.FC<ObjectWrapperProps> = ({ obj }) => {
         {obj.type === 'torus' && <torusGeometry args={[0.4, 0.15, 16, 48]} />}
         {obj.type === 'capsule' && <capsuleGeometry args={[0.25, 0.5, 8, 16]} />}
         
-        <Suspense fallback={<meshStandardMaterial color={isSelected ? '#ff0055' : obj.color} roughness={obj.roughness} metalness={obj.metalness} />}>
-            {obj.textureUrl ? (
-                <TexturedMaterial 
-                    url={obj.textureUrl} 
-                    color={isSelected ? '#ff0055' : obj.color} 
-                    roughness={obj.roughness} 
-                    metalness={obj.metalness} 
-                />
-            ) : (
-                <meshStandardMaterial
-                    color={isSelected ? '#ff0055' : obj.color}
-                    roughness={obj.roughness}
-                    metalness={obj.metalness}
-                />
-            )}
+        <Suspense fallback={<meshStandardMaterial color={getDisplayColor()} roughness={obj.roughness} metalness={obj.metalness} />}>
+          {obj.textureUrl ? (
+            <TexturedMaterial 
+              url={obj.textureUrl} 
+              color={getDisplayColor()} 
+              roughness={obj.roughness} 
+              metalness={obj.metalness} 
+            />
+          ) : (
+            <meshStandardMaterial
+              color={getDisplayColor()}
+              roughness={obj.roughness}
+              metalness={obj.metalness}
+            />
+          )}
         </Suspense>
       </mesh>
-      {isSelected && mesh && selectedIds.length === 1 && (
+      {showTransformControls && (
         <TransformControlsWrapper
           mesh={mesh}
           transformMode={transformMode}
@@ -121,3 +165,5 @@ export const ObjectWrapper: React.FC<ObjectWrapperProps> = ({ obj }) => {
     </>
   );
 };
+
+export const ObjectWrapper = memo(ObjectWrapperInner);
