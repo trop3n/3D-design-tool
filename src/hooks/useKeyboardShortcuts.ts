@@ -14,7 +14,12 @@ export const useKeyboardShortcuts = () => {
 
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.target instanceof HTMLInputElement || e.target instanceof HTMLTextAreaElement) {
+        return;
+      }
+
       if ((e.metaKey || e.ctrlKey) && e.key === 'z') {
+        e.preventDefault();
         if (e.shiftKey) {
           redo();
         } else {
@@ -24,11 +29,8 @@ export const useKeyboardShortcuts = () => {
       }
 
       if ((e.metaKey || e.ctrlKey) && e.key === 'y') {
+        e.preventDefault();
         redo();
-        return;
-      }
-
-      if (e.target instanceof HTMLInputElement || e.target instanceof HTMLTextAreaElement) {
         return;
       }
 

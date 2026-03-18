@@ -10,11 +10,13 @@ interface TexturedMaterialProps {
   color: string;
   roughness: number;
   metalness: number;
+  opacity: number;
+  transparent: boolean;
 }
 
-const TexturedMaterial: React.FC<TexturedMaterialProps> = memo(({ url, color, roughness, metalness }) => {
+const TexturedMaterial: React.FC<TexturedMaterialProps> = memo(({ url, color, roughness, metalness, opacity, transparent }) => {
   const texture = useTexture(url);
-  return <meshStandardMaterial map={texture} color={color} roughness={roughness} metalness={metalness} />;
+  return <meshStandardMaterial map={texture} color={color} roughness={roughness} metalness={metalness} opacity={opacity} transparent={transparent} />;
 });
 
 TexturedMaterial.displayName = 'TexturedMaterial';
@@ -40,7 +42,7 @@ const TransformControlsWrapper: React.FC<TransformControlsWrapperProps> = memo((
       object={mesh}
       mode={transformMode}
       translationSnap={snap}
-      rotationSnap={snap ? snap * (Math.PI / 180) * 15 : undefined}
+      rotationSnap={snap ? 15 * (Math.PI / 180) : undefined}
       scaleSnap={snap}
       onMouseUp={onTransformEnd}
     />
@@ -116,6 +118,8 @@ const ObjectWrapperInner: React.FC<ObjectWrapperProps> = ({ obj }) => {
   };
 
   const showTransformControls = !isPlayMode && isSelected && mesh && selectedCount === 1;
+  const opacity = obj.opacity ?? 1;
+  const transparent = opacity < 1;
 
   return (
     <>
@@ -124,6 +128,7 @@ const ObjectWrapperInner: React.FC<ObjectWrapperProps> = ({ obj }) => {
         position={obj.position}
         rotation={obj.rotation}
         scale={obj.scale}
+        visible={obj.visible !== false}
         onClick={handleClick}
         onPointerEnter={handlePointerEnter}
         onPointerLeave={handlePointerLeave}
@@ -135,20 +140,24 @@ const ObjectWrapperInner: React.FC<ObjectWrapperProps> = ({ obj }) => {
         {obj.type === 'cone' && <coneGeometry args={[0.5, 1, 32]} />}
         {obj.type === 'torus' && <torusGeometry args={[0.4, 0.15, 16, 48]} />}
         {obj.type === 'capsule' && <capsuleGeometry args={[0.25, 0.5, 8, 16]} />}
-        
-        <Suspense fallback={<meshStandardMaterial color={getDisplayColor()} roughness={obj.roughness} metalness={obj.metalness} />}>
+
+        <Suspense fallback={<meshStandardMaterial color={getDisplayColor()} roughness={obj.roughness} metalness={obj.metalness} opacity={opacity} transparent={transparent} />}>
           {obj.textureUrl ? (
-            <TexturedMaterial 
-              url={obj.textureUrl} 
-              color={getDisplayColor()} 
-              roughness={obj.roughness} 
-              metalness={obj.metalness} 
+            <TexturedMaterial
+              url={obj.textureUrl}
+              color={getDisplayColor()}
+              roughness={obj.roughness}
+              metalness={obj.metalness}
+              opacity={opacity}
+              transparent={transparent}
             />
           ) : (
             <meshStandardMaterial
               color={getDisplayColor()}
               roughness={obj.roughness}
               metalness={obj.metalness}
+              opacity={opacity}
+              transparent={transparent}
             />
           )}
         </Suspense>

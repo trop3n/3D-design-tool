@@ -363,9 +363,11 @@ export const useStore = create<AppState>()(
       }),
       {
         name: STORAGE_KEY,
-        partialize: (state) => ({ 
+        partialize: (state) => ({
           objects: state.objects,
           objectInteractions: state.objectInteractions,
+          lights: state.lights,
+          cameraBookmarks: state.cameraBookmarks,
         }),
       }
     ),

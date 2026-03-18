@@ -24,15 +24,15 @@ export const PropertiesPanel: React.FC = () => {
 
   if (multiSelectCount > 1) {
     const handleChange = (prop: keyof SceneObject, axis: number, value: number) => {
-      updateSelectedObjects({ [prop]: getUpdatedVector(prop, axis, value) });
-    };
-
-    const getUpdatedVector = (prop: keyof SceneObject, axis: number, value: number): [number, number, number] => {
       const firstObj = selectedObjects[0];
-      const currentVector = firstObj[prop] as [number, number, number];
-      const newVector = [...currentVector] as [number, number, number];
-      newVector[axis] = value;
-      return newVector;
+      const currentValue = (firstObj[prop] as [number, number, number])[axis];
+      const delta = value - currentValue;
+      for (const obj of selectedObjects) {
+        const currentVector = obj[prop] as [number, number, number];
+        const newVector = [...currentVector] as [number, number, number];
+        newVector[axis] = currentVector[axis] + delta;
+        updateObject(obj.id, { [prop]: newVector });
+      }
     };
 
     return (
