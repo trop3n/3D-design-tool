@@ -1,12 +1,13 @@
 import React from 'react';
 import { useStore } from '../../store/useStore';
-import { Box, Circle, Square, Triangle, Cylinder, CircleDot, Pill, Trash2 } from 'lucide-react';
+import { Box, Circle, Square, Triangle, Cylinder, CircleDot, Pill, Trash2, Eye, EyeOff } from 'lucide-react';
 
 export const Outliner: React.FC = () => {
   const objects = useStore((state) => state.objects);
   const selectedIds = useStore((state) => state.selectedIds);
   const selectObject = useStore((state) => state.selectObject);
   const deleteObject = useStore((state) => state.deleteObject);
+  const updateObject = useStore((state) => state.updateObject);
 
   const getIcon = (type: string) => {
     switch (type) {
@@ -38,19 +39,32 @@ export const Outliner: React.FC = () => {
               selectedIds.includes(obj.id) ? 'bg-blue-600' : 'hover:bg-gray-800'
             }`}
           >
-            <div className="flex items-center gap-2">
+            <div className={`flex items-center gap-2 ${obj.visible === false ? 'opacity-40' : ''}`}>
               {getIcon(obj.type)}
               <span>{obj.name}</span>
             </div>
-            <button
-              onClick={(e) => {
-                e.stopPropagation();
-                deleteObject(obj.id);
-              }}
-              className="text-gray-400 hover:text-red-400 opacity-0 group-hover:opacity-100 transition-opacity"
-            >
-              <Trash2 size={14} />
-            </button>
+            <div className="flex items-center gap-1">
+              <button
+                onClick={(e) => {
+                  e.stopPropagation();
+                  updateObject(obj.id, { visible: obj.visible === false });
+                }}
+                className={`text-gray-400 hover:text-white transition-opacity ${
+                  obj.visible === false ? 'opacity-100' : 'opacity-0 group-hover:opacity-100'
+                }`}
+              >
+                {obj.visible === false ? <EyeOff size={14} /> : <Eye size={14} />}
+              </button>
+              <button
+                onClick={(e) => {
+                  e.stopPropagation();
+                  deleteObject(obj.id);
+                }}
+                className="text-gray-400 hover:text-red-400 opacity-0 group-hover:opacity-100 transition-opacity"
+              >
+                <Trash2 size={14} />
+              </button>
+            </div>
           </div>
         ))}
         {objects.length === 0 && (
