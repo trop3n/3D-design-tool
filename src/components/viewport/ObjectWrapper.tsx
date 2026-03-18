@@ -1,6 +1,6 @@
 import React, { Suspense, useState, memo, useCallback } from 'react';
 import { TransformControls, useTexture } from '@react-three/drei';
-import { Mesh } from 'three';
+import { Object3D } from 'three';
 import { useStore } from '../../store/useStore';
 import type { SceneObject, EventType } from '../../types/store';
 import { SELECTION_COLOR } from '../../constants/scene';
@@ -22,24 +22,24 @@ const TexturedMaterial: React.FC<TexturedMaterialProps> = memo(({ url, color, ro
 TexturedMaterial.displayName = 'TexturedMaterial';
 
 interface TransformControlsWrapperProps {
-  mesh: Mesh;
+  object3d: Object3D;
   transformMode: 'translate' | 'rotate' | 'scale';
   snapEnabled: boolean;
   snapSize: number;
   onTransformEnd: () => void;
 }
 
-const TransformControlsWrapper: React.FC<TransformControlsWrapperProps> = memo(({ 
-  mesh, 
-  transformMode, 
+const TransformControlsWrapper: React.FC<TransformControlsWrapperProps> = memo(({
+  object3d,
+  transformMode,
   snapEnabled,
   snapSize,
-  onTransformEnd 
+  onTransformEnd
 }) => {
   const snap = snapEnabled ? snapSize : undefined;
   return (
     <TransformControls
-      object={mesh}
+      object={object3d}
       mode={transformMode}
       translationSnap={snap}
       rotationSnap={snap ? 15 * (Math.PI / 180) : undefined}
@@ -56,9 +56,9 @@ interface ObjectWrapperProps {
 }
 
 const ObjectWrapperInner: React.FC<ObjectWrapperProps> = ({ obj }) => {
-  const [mesh, setMesh] = useState<Mesh | null>(null);
+  const [object3d, setObject3d] = useState<Object3D | null>(null);
   const [isHovered, setIsHovered] = useState(false);
-  
+
   const isSelected = useStore(
     useCallback((state) => state.selectedIds.includes(obj.id), [obj.id])
   );
@@ -72,10 +72,15 @@ const ObjectWrapperInner: React.FC<ObjectWrapperProps> = ({ obj }) => {
   );
   const isPlayMode = useStore((state) => state.isPlayMode);
   const triggerObjectEvent = useStore((state) => state.triggerObjectEvent);
+  const children = useStore(
+    useCallback((state) => obj.type === 'group'
+      ? state.objects.filter((o) => o.parentId === obj.id)
+      : [], [obj.id, obj.type])
+  );
 
   const handleClick = useCallback((e: { stopPropagation: () => void; shiftKey: boolean; ctrlKey: boolean; metaKey: boolean }) => {
     e.stopPropagation();
-    
+
     if (isPlayMode) {
       triggerObjectEvent(obj.id, 'click' as EventType);
     } else {
@@ -101,14 +106,14 @@ const ObjectWrapperInner: React.FC<ObjectWrapperProps> = ({ obj }) => {
   }, [obj.id, isPlayMode, triggerObjectEvent]);
 
   const handleTransformEnd = useCallback(() => {
-    if (mesh) {
+    if (object3d) {
       updateObject(obj.id, {
-        position: [mesh.position.x, mesh.position.y, mesh.position.z],
-        rotation: [mesh.rotation.x, mesh.rotation.y, mesh.rotation.z],
-        scale: [mesh.scale.x, mesh.scale.y, mesh.scale.z],
+        position: [object3d.position.x, object3d.position.y, object3d.position.z],
+        rotation: [object3d.rotation.x, object3d.rotation.y, object3d.rotation.z],
+        scale: [object3d.scale.x, object3d.scale.y, object3d.scale.z],
       });
     }
-  }, [mesh, obj.id, updateObject]);
+  }, [object3d, obj.id, updateObject]);
 
   const getDisplayColor = () => {
     if (isPlayMode) return obj.color;
@@ -117,14 +122,41 @@ const ObjectWrapperInner: React.FC<ObjectWrapperProps> = ({ obj }) => {
     return obj.color;
   };
 
-  const showTransformControls = !isPlayMode && isSelected && mesh && selectedCount === 1;
+  const showTransformControls = !isPlayMode && isSelected && object3d && selectedCount === 1;
   const opacity = obj.opacity ?? 1;
   const transparent = opacity < 1;
+
+  if (obj.type === 'group') {
+    return (
+      <>
+        <group
+          ref={setObject3d}
+          position={obj.position}
+          rotation={obj.rotation}
+          scale={obj.scale}
+          visible={obj.visible !== false}
+        >
+          {children.map((child) => (
+            <ObjectWrapper key={child.id} obj={child} />
+          ))}
+        </group>
+        {showTransformControls && (
+          <TransformControlsWrapper
+            object3d={object3d}
+            transformMode={transformMode}
+            snapEnabled={snapEnabled}
+            snapSize={snapSize}
+            onTransformEnd={handleTransformEnd}
+          />
+        )}
+      </>
+    );
+  }
 
   return (
     <>
       <mesh
-        ref={setMesh}
+        ref={setObject3d}
         position={obj.position}
         rotation={obj.rotation}
         scale={obj.scale}
@@ -164,7 +196,7 @@ const ObjectWrapperInner: React.FC<ObjectWrapperProps> = ({ obj }) => {
       </mesh>
       {showTransformControls && (
         <TransformControlsWrapper
-          mesh={mesh}
+          object3d={object3d}
           transformMode={transformMode}
           snapEnabled={snapEnabled}
           snapSize={snapSize}

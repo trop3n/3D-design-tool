@@ -1,7 +1,7 @@
 import React from 'react';
 import { useStore } from '../../store/useStore';
 import { undo, redo } from '../../hooks/useTemporalStore';
-import { Box, Circle, Square, Move, RotateCw, Scaling, Download, Undo2, Redo2, Triangle, CircleDot, Pill, Cylinder, Magnet, Copy, Clipboard, CopyPlus, Play, Pause } from 'lucide-react';
+import { Box, Circle, Square, Move, RotateCw, Scaling, Download, Undo2, Redo2, Triangle, CircleDot, Pill, Cylinder, Magnet, Copy, Clipboard, CopyPlus, Play, Pause, Group, Ungroup } from 'lucide-react';
 
 export const Toolbar: React.FC = () => {
   const addObject = useStore((state) => state.addObject);
@@ -16,6 +16,10 @@ export const Toolbar: React.FC = () => {
   const duplicateSelectedObjects = useStore((state) => state.duplicateSelectedObjects);
   const isPlayMode = useStore((state) => state.isPlayMode);
   const setIsPlayMode = useStore((state) => state.setIsPlayMode);
+  const groupSelectedObjects = useStore((state) => state.groupSelectedObjects);
+  const ungroupSelectedObjects = useStore((state) => state.ungroupSelectedObjects);
+  const objects = useStore((state) => state.objects);
+  const hasSelectedGroup = selectedIds.some((id) => objects.find((o) => o.id === id)?.type === 'group');
 
   const handleUndo = () => undo();
   const handleRedo = () => redo();
@@ -84,13 +88,29 @@ export const Toolbar: React.FC = () => {
         >
           <Clipboard size={20} color="white" />
         </button>
-        <button 
+        <button
           onClick={duplicateSelectedObjects}
           className={`p-2 rounded transition-colors ${selectedIds.length === 0 ? 'opacity-50' : 'hover:bg-gray-700'}`}
           title="Duplicate (Ctrl+D)"
           disabled={selectedIds.length === 0}
         >
           <CopyPlus size={20} color="white" />
+        </button>
+        <button
+          onClick={groupSelectedObjects}
+          className={`p-2 rounded transition-colors ${selectedIds.length < 2 ? 'opacity-50' : 'hover:bg-gray-700'}`}
+          title="Group (Ctrl+G)"
+          disabled={selectedIds.length < 2}
+        >
+          <Group size={20} color="white" />
+        </button>
+        <button
+          onClick={ungroupSelectedObjects}
+          className={`p-2 rounded transition-colors ${!hasSelectedGroup ? 'opacity-50' : 'hover:bg-gray-700'}`}
+          title="Ungroup (Ctrl+Shift+G)"
+          disabled={!hasSelectedGroup}
+        >
+          <Ungroup size={20} color="white" />
         </button>
       </div>
       <div className="flex gap-2 pl-2 border-r border-gray-600 pr-4">

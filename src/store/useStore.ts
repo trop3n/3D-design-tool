@@ -31,12 +31,40 @@ import {
   DEFAULT_SNAP_SIZE,
 } from '../constants/scene';
 
-const createObjectCopy = (obj: SceneObject, offset: number): SceneObject => ({
-  ...obj,
-  id: uuidv4(),
-  name: `${obj.name} (copy)`,
-  position: [obj.position[0] + offset, obj.position[1], obj.position[2] + offset] as [number, number, number],
-});
+const getDescendantIds = (objects: SceneObject[], id: string): string[] => {
+  const obj = objects.find((o) => o.id === id);
+  if (!obj?.children) return [];
+  return obj.children.flatMap((childId) => [childId, ...getDescendantIds(objects, childId)]);
+};
+
+const copySubtree = (objects: SceneObject[], rootIds: string[], offset: number): SceneObject[] => {
+  const idMap = new Map<string, string>();
+  const allIds = new Set<string>();
+  for (const id of rootIds) {
+    allIds.add(id);
+    for (const desc of getDescendantIds(objects, id)) {
+      allIds.add(desc);
+    }
+  }
+  for (const id of allIds) {
+    idMap.set(id, uuidv4());
+  }
+  return objects
+    .filter((obj) => allIds.has(obj.id))
+    .map((obj) => {
+      const isRoot = rootIds.includes(obj.id);
+      return {
+        ...obj,
+        id: idMap.get(obj.id)!,
+        name: isRoot ? `${obj.name} (copy)` : obj.name,
+        position: isRoot
+          ? [obj.position[0] + offset, obj.position[1], obj.position[2] + offset] as [number, number, number]
+          : obj.position,
+        parentId: obj.parentId && idMap.has(obj.parentId) ? idMap.get(obj.parentId) : obj.parentId,
+        children: obj.children?.map((cid) => idMap.get(cid) || cid),
+      };
+    });
+};
 
 const createDefaultObject = (type: ShapeType): SceneObject => ({
   id: uuidv4(),
@@ -118,7 +146,7 @@ export const useStore = create<AppState>()(
           }),
         selectAll: () =>
           set((state) => ({
-            selectedIds: state.objects.map((obj) => obj.id),
+            selectedIds: state.objects.filter((obj) => !obj.parentId).map((obj) => obj.id),
           })),
         deselectAll: () => set({ selectedIds: [] }),
         setTransformMode: (mode) => set({ transformMode: mode }),
@@ -139,42 +167,78 @@ export const useStore = create<AppState>()(
             ),
           })),
         deleteObject: (id) =>
-          set((state) => ({
-            objects: state.objects.filter((obj) => obj.id !== id),
-            selectedIds: state.selectedIds.filter((sid) => sid !== id),
-            objectInteractions: state.objectInteractions.filter((oi) => oi.objectId !== id),
-          })),
+          set((state) => {
+            const idsToDelete = new Set([id, ...getDescendantIds(state.objects, id)]);
+            const parentObj = state.objects.find((o) => o.children?.includes(id));
+            return {
+              objects: state.objects
+                .filter((obj) => !idsToDelete.has(obj.id))
+                .map((obj) => obj.id === parentObj?.id
+                  ? { ...obj, children: obj.children?.filter((cid) => cid !== id) }
+                  : obj
+                ),
+              selectedIds: state.selectedIds.filter((sid) => !idsToDelete.has(sid)),
+              objectInteractions: state.objectInteractions.filter((oi) => !idsToDelete.has(oi.objectId)),
+            };
+          }),
         deleteSelectedObjects: () =>
-          set((state) => ({
-            objects: state.objects.filter((obj) => !state.selectedIds.includes(obj.id)),
-            selectedIds: [],
-            objectInteractions: state.objectInteractions.filter(
-              (oi) => !state.selectedIds.includes(oi.objectId)
-            ),
-          })),
+          set((state) => {
+            const idsToDelete = new Set<string>();
+            for (const id of state.selectedIds) {
+              idsToDelete.add(id);
+              for (const desc of getDescendantIds(state.objects, id)) {
+                idsToDelete.add(desc);
+              }
+            }
+            return {
+              objects: state.objects
+                .filter((obj) => !idsToDelete.has(obj.id))
+                .map((obj) => obj.children
+                  ? { ...obj, children: obj.children.filter((cid) => !idsToDelete.has(cid)) }
+                  : obj
+                ),
+              selectedIds: [],
+              objectInteractions: state.objectInteractions.filter(
+                (oi) => !idsToDelete.has(oi.objectId)
+              ),
+            };
+          }),
         copySelectedObjects: () =>
-          set((state) => ({
-            clipboard: state.objects
-              .filter((obj) => state.selectedIds.includes(obj.id))
-              .map((obj) => ({ ...obj })),
-          })),
+          set((state) => {
+            const allIds = new Set<string>();
+            for (const id of state.selectedIds) {
+              allIds.add(id);
+              for (const desc of getDescendantIds(state.objects, id)) {
+                allIds.add(desc);
+              }
+            }
+            return {
+              clipboard: state.objects
+                .filter((obj) => allIds.has(obj.id))
+                .map((obj) => ({ ...obj })),
+            };
+          }),
         pasteObjects: () =>
           set((state) => {
             if (state.clipboard.length === 0) return state;
-            const newObjects = state.clipboard.map((obj) => createObjectCopy(obj, PASTE_OFFSET));
+            const rootIds = state.clipboard.filter((obj) => !obj.parentId || !state.clipboard.some((o) => o.id === obj.parentId)).map((o) => o.id);
+            const newObjects = copySubtree(state.clipboard, rootIds, PASTE_OFFSET);
+            const newRootIds = newObjects.filter((obj) => !obj.parentId || !newObjects.some((o) => o.id === obj.parentId)).map((o) => o.id);
             return {
               objects: [...state.objects, ...newObjects],
-              selectedIds: newObjects.map((obj) => obj.id),
+              selectedIds: newRootIds,
             };
           }),
         duplicateSelectedObjects: () =>
           set((state) => {
-            const selectedObjects = state.objects.filter((obj) => state.selectedIds.includes(obj.id));
-            if (selectedObjects.length === 0) return state;
-            const newObjects = selectedObjects.map((obj) => createObjectCopy(obj, PASTE_OFFSET));
+            if (state.selectedIds.length === 0) return state;
+            const newObjects = copySubtree(state.objects, state.selectedIds, PASTE_OFFSET);
+            const newRootIds = newObjects
+              .filter((obj) => !obj.parentId || !newObjects.some((o) => o.id === obj.parentId))
+              .map((o) => o.id);
             return {
               objects: [...state.objects, ...newObjects],
-              selectedIds: newObjects.map((obj) => obj.id),
+              selectedIds: newRootIds,
             };
           }),
         addLight: (type: LightType) =>
@@ -339,6 +403,91 @@ export const useStore = create<AppState>()(
                 : oi
             ),
           })),
+        groupSelectedObjects: () =>
+          set((state) => {
+            const selected = state.objects.filter((obj) => state.selectedIds.includes(obj.id));
+            if (selected.length < 2) return state;
+
+            const cx = selected.reduce((sum, o) => sum + o.position[0], 0) / selected.length;
+            const cy = selected.reduce((sum, o) => sum + o.position[1], 0) / selected.length;
+            const cz = selected.reduce((sum, o) => sum + o.position[2], 0) / selected.length;
+
+            const groupId = uuidv4();
+            const childIds = selected.map((o) => o.id);
+
+            const group: SceneObject = {
+              id: groupId,
+              type: 'group',
+              name: 'Group',
+              position: [cx, cy, cz],
+              rotation: DEFAULT_ROTATION,
+              scale: DEFAULT_SCALE,
+              color: DEFAULT_COLOR,
+              roughness: DEFAULT_ROUGHNESS,
+              metalness: DEFAULT_METALNESS,
+              children: childIds,
+            };
+
+            const updatedObjects = state.objects.map((obj) => {
+              if (!childIds.includes(obj.id)) return obj;
+              // Remove from old parent's children list if needed
+              return {
+                ...obj,
+                parentId: groupId,
+                position: [
+                  obj.position[0] - cx,
+                  obj.position[1] - cy,
+                  obj.position[2] - cz,
+                ] as [number, number, number],
+              };
+            }).map((obj) => {
+              // Clean up old parent's children arrays
+              if (obj.children && obj.id !== groupId) {
+                const remaining = obj.children.filter((cid) => !childIds.includes(cid));
+                return remaining.length !== obj.children.length
+                  ? { ...obj, children: remaining.length > 0 ? remaining : undefined }
+                  : obj;
+              }
+              return obj;
+            });
+
+            return {
+              objects: [...updatedObjects, group],
+              selectedIds: [groupId],
+            };
+          }),
+        ungroupSelectedObjects: () =>
+          set((state) => {
+            const groupsToUngroup = state.objects.filter(
+              (obj) => state.selectedIds.includes(obj.id) && obj.type === 'group' && obj.children?.length
+            );
+            if (groupsToUngroup.length === 0) return state;
+
+            const groupIds = new Set(groupsToUngroup.map((g) => g.id));
+            const freedChildIds: string[] = [];
+
+            const updatedObjects = state.objects
+              .filter((obj) => !groupIds.has(obj.id))
+              .map((obj) => {
+                const parentGroup = groupsToUngroup.find((g) => g.children?.includes(obj.id));
+                if (!parentGroup) return obj;
+                freedChildIds.push(obj.id);
+                return {
+                  ...obj,
+                  parentId: parentGroup.parentId || undefined,
+                  position: [
+                    obj.position[0] + parentGroup.position[0],
+                    obj.position[1] + parentGroup.position[1],
+                    obj.position[2] + parentGroup.position[2],
+                  ] as [number, number, number],
+                };
+              });
+
+            return {
+              objects: updatedObjects,
+              selectedIds: freedChildIds,
+            };
+          }),
         triggerObjectEvent: (objectId: string, eventType: EventType) => {
           const state = get();
           const interaction = state.objectInteractions.find((oi) => oi.objectId === objectId);

@@ -11,6 +11,8 @@ export const useKeyboardShortcuts = () => {
   const duplicateSelectedObjects = useStore((state) => state.duplicateSelectedObjects);
   const selectAll = useStore((state) => state.selectAll);
   const deselectAll = useStore((state) => state.deselectAll);
+  const groupSelectedObjects = useStore((state) => state.groupSelectedObjects);
+  const ungroupSelectedObjects = useStore((state) => state.ungroupSelectedObjects);
 
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
@@ -58,6 +60,16 @@ export const useKeyboardShortcuts = () => {
         return;
       }
 
+      if ((e.metaKey || e.ctrlKey) && e.key === 'g') {
+        e.preventDefault();
+        if (e.shiftKey) {
+          ungroupSelectedObjects();
+        } else {
+          groupSelectedObjects();
+        }
+        return;
+      }
+
       if (e.key === 'Escape') {
         deselectAll();
         return;
@@ -84,5 +96,5 @@ export const useKeyboardShortcuts = () => {
 
     window.addEventListener('keydown', handleKeyDown);
     return () => window.removeEventListener('keydown', handleKeyDown);
-  }, [setTransformMode, deleteSelectedObjects, selectedIds, copySelectedObjects, pasteObjects, duplicateSelectedObjects, selectAll, deselectAll]);
+  }, [setTransformMode, deleteSelectedObjects, selectedIds, copySelectedObjects, pasteObjects, duplicateSelectedObjects, selectAll, deselectAll, groupSelectedObjects, ungroupSelectedObjects]);
 };

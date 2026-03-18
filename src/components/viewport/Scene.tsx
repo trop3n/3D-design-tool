@@ -208,7 +208,7 @@ export const Scene: React.FC<SceneProps> = ({ onCameraReady, cameraTarget }) => 
       <CameraController onCameraReady={onCameraReady} cameraTarget={cameraTarget} />
       
       <group ref={sceneGroupRef}>
-        {objects.map((obj) => (
+        {objects.filter((obj) => !obj.parentId).map((obj) => (
           <ObjectWrapper key={obj.id} obj={obj} />
         ))}
       </group>

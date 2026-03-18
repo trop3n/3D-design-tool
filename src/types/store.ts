@@ -1,4 +1,4 @@
-export type ShapeType = 'box' | 'sphere' | 'plane' | 'cylinder' | 'cone' | 'torus' | 'capsule';
+export type ShapeType = 'box' | 'sphere' | 'plane' | 'cylinder' | 'cone' | 'torus' | 'capsule' | 'group';
 
 export type LightType = 'ambient' | 'directional' | 'point' | 'spot';
 
@@ -32,6 +32,8 @@ export interface SceneObject {
   textureUrl?: string;
   opacity?: number;
   visible?: boolean;
+  parentId?: string | null;
+  children?: string[];
 }
 
 export type EventType = 
@@ -141,4 +143,6 @@ export interface AppState {
   updateInteractionRule: (objectId: string, ruleId: string, updates: Partial<InteractionRule>) => void;
   deleteInteractionRule: (objectId: string, ruleId: string) => void;
   triggerObjectEvent: (objectId: string, eventType: EventType) => void;
+  groupSelectedObjects: () => void;
+  ungroupSelectedObjects: () => void;
 }
