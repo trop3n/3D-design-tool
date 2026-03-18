@@ -60,12 +60,28 @@ export const PropertiesPanel: React.FC = () => {
 
         <div className="mb-4">
           <label className="block text-xs font-bold text-gray-400 mb-1">Color</label>
-          <input 
-            type="color" 
-            value={selectedObjects[0].color} 
+          <input
+            type="color"
+            value={selectedObjects[0].color}
             onChange={(e) => updateSelectedObjects({ color: e.target.value })}
             className="w-full h-8 cursor-pointer rounded border border-gray-700"
           />
+        </div>
+
+        <div className="mb-4">
+          <label className="block text-xs font-bold text-gray-400 mb-1">Opacity</label>
+          <div className="flex items-center gap-2">
+            <input
+              type="range"
+              min="0"
+              max="1"
+              step="0.01"
+              value={selectedObjects[0].opacity ?? 1}
+              onChange={(e) => updateSelectedObjects({ opacity: parseFloat(e.target.value) })}
+              className="flex-1 h-1 bg-gray-700 rounded-lg appearance-none cursor-pointer"
+            />
+            <span className="text-xs text-gray-400 w-10 text-right">{(selectedObjects[0].opacity ?? 1).toFixed(2)}</span>
+          </div>
         </div>
 
         <div className="mt-8 pt-4 border-t border-gray-700">
@@ -174,6 +190,21 @@ export const PropertiesPanel: React.FC = () => {
               step="0.01"
               value={selectedObject?.metalness || 0.5}
               onChange={(e) => selectedObject && updateObject(selectedObject.id, { metalness: parseFloat(e.target.value) })}
+              className="w-full h-1 bg-gray-700 rounded-lg appearance-none cursor-pointer"
+            />
+          </div>
+          <div>
+            <div className="flex justify-between text-xs text-gray-500 mb-1">
+              <span>Opacity</span>
+              <span>{(selectedObject?.opacity ?? 1).toFixed(2)}</span>
+            </div>
+            <input
+              type="range"
+              min="0"
+              max="1"
+              step="0.01"
+              value={selectedObject?.opacity ?? 1}
+              onChange={(e) => selectedObject && updateObject(selectedObject.id, { opacity: parseFloat(e.target.value) })}
               className="w-full h-1 bg-gray-700 rounded-lg appearance-none cursor-pointer"
             />
           </div>
